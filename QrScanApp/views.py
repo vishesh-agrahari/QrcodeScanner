@@ -6,19 +6,18 @@ from pdf2image import convert_from_path
 from pyzbar import pyzbar
 from PIL import Image
 from pyzbar import pyzbar
-import cv2
+import imageio
 import jwt
 import re
 
-inputFilePath = "input\\temp.pdf"
-imageFolderPath = "pdf2image"
+tempFilePath = "temp.pdf"
+# imageFolderPath = "pdf2image"
 popplerBinFolderPath = "poppler-0.68.0\\bin"
 
 def deleteAllTempFiles():
-    if(os.path.exists(inputFilePath)):
-        os.remove(inputFilePath)
-    for f in os.listdir(imageFolderPath):
-        os.remove(os.path.join(imageFolderPath, f))
+    for item in os.listdir():
+        if (item.endswith(".jpg") or item.endswith(".png") or item.endswith(".pdf")):
+            os.remove(item)
 def processQRData(qrdata):
     qrdata['data'] = qrdata['data'].replace("\"", "")
     strdata = qrdata.get('data')
@@ -41,7 +40,7 @@ def extractInvQrData(n):
         jsonArray["status"]='1'
         for i in range(n):
             # read images using opencv
-            img = cv2.imread(imageFolderPath + '//page' + str(i) + '.jpg')
+            img = imageio.imread('page' + str(i) + '.jpg')
             try:
                 barcodes = pyzbar.decode(img)
                 
@@ -102,7 +101,7 @@ def extractEwayBillQrData(n):
     qrCodeData = []
     for i in range(n):
         # read images using opencv
-        img = cv2.imread(imageFolderPath + '//page'+ str(i) + '.jpg')
+        img = imageio.imread('page'+ str(i) + '.jpg')
         try:
             barcodes = pyzbar.decode(img)
             bdata = barcodes[0].data.decode()
@@ -116,7 +115,7 @@ def convert_pdf_to_image(inputFilePath):
     images = convert_from_path(inputFilePath, poppler_path=popplerBinFolderPath)
     for i in range(len(images)):
         # Save pages as images
-        images[i].save(imageFolderPath + '//page' + str(i) + '.jpg', 'JPEG')
+        images[i].save('page' + str(i) + '.jpg', 'JPEG')
     return len(images)
 
    
@@ -136,17 +135,17 @@ def InvPdf(request):
             return JsonResponse({'status':'0','error_message':'file not found'})
  
         if(ext.lower() == ".pdf"):
-            with open(inputFilePath, 'wb') as f:
+            with open(tempFilePath, 'wb') as f:
                 for chunk in file.chunks():
                     f.write(chunk)
 
-            n = convert_pdf_to_image(inputFilePath)
+            n = convert_pdf_to_image(tempFilePath)
             qrCodeData = extractInvQrData(n)
             deleteAllTempFiles()
             return JsonResponse(qrCodeData)
 
         elif(ext.lower() == ".jpg"):
-            with open(imageFolderPath + '//page0.jpg', 'wb') as f:
+            with open('page0.jpg', 'wb') as f:
                     for chunk in file.chunks():
                          f.write(chunk)
             qrCodeData = extractInvQrData(1)
@@ -171,11 +170,11 @@ def EwayBillPdf(request):
             return JsonResponse({'status':'0','error_message':'file not found'})
 
         if(ext.lower() == ".pdf"):
-                with open(inputFilePath, 'wb') as f:
+                with open(tempFilePath, 'wb') as f:
                     for chunk in file.chunks():
                          f.write(chunk)
 
-                n = convert_pdf_to_image(inputFilePath)
+                n = convert_pdf_to_image(tempFilePath)
                 qrCodeData = extractEwayBillQrData(n)
                 # extract fields and values from qrcodedata
                 jsonData = fields_And_Values_Qrcodedata(qrCodeData)
@@ -183,7 +182,7 @@ def EwayBillPdf(request):
                 return JsonResponse(jsonData)
             
         elif(ext.lower() == ".jpg"):
-                with open(imageFolderPath + '//page0.jpg', 'wb') as f:
+                with open('page0.jpg', 'wb') as f:
                     for chunk in file.chunks():
                          f.write(chunk)
                 qrCodeData = extractEwayBillQrData(1)
